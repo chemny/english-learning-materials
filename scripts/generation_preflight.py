@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -11,7 +12,8 @@ from pathlib import Path
 
 TEXT_SURFACE_RE = re.compile(
     r"姓名|学生证|证件|卡片|名片|门牌|班级牌|黑板|白板|书|页面|论坛|帖子|屏幕|电脑|手机|资料|信息|档案|界面|地图|路牌|标牌|标签|日历|旗|包装|报纸|表格|"
-    r"\b(?:name|id|card|sign|board|book|page|forum|post|screen|computer|phone|profile|information|interface|map|label|calendar|flag|package)\b",
+    r"衣服|服装|球衣|T恤|衬衫|外套|帽子|书包|背包|机器人|仪表盘|控制面板|键盘|棋盘|乐谱|奖牌|证书|"
+    r"\b(?:name|id|card|sign|board|book|page|forum|post|screen|computer|phone|profile|information|interface|map|label|calendar|flag|package|clothing|clothes|shirt|jersey|t-shirt|jacket|hat|cap|backpack|robot|dashboard|control panel|keyboard|chessboard|sheet music|medal|certificate)\b",
     flags=re.IGNORECASE,
 )
 NUMERIC_SURFACE_RE = re.compile(
@@ -23,6 +25,14 @@ BRAND_SURFACE_RE = re.compile(
     r"商标|品牌|包装|旗帜|国旗|徽标|"
     r"\b(?:brand|logo|package|flag)\b",
     flags=re.IGNORECASE,
+)
+
+
+ILLUSTRATION_SURFACE_LOCK = (
+    "Across every illustration, keep incidental text-bearing surfaces—including clothing, jerseys, hats, bags, book "
+    "covers, paper, screens, boards, signs, robots, control panels, keyboards, packaging, medals and similar props—blank "
+    "or abstract. Unless a character is explicitly assigned to that exact content item in VISIBLE TEXT, do not invent "
+    "letters, words, digits, numbers, logos, brands, slogans or labels on any illustrated object."
 )
 
 
@@ -79,7 +89,7 @@ def visual_risk_guard(visual_instruction: str, usage: str = "") -> str:
     if TEXT_SURFACE_RE.search(combined):
         guards.append(
             "render all text-bearing surfaces as blank or abstract shapes with empty lines and unlabeled icons; "
-            "do not invent names, letters, words, captions or interface copy"
+            "do not invent names, letters, words, captions, digits, numbers, logos, brands or interface copy"
         )
     if NUMERIC_SURFACE_RE.search(combined):
         guards.append("do not invent digits, ages, grades, dates, times or class numbers")
@@ -128,6 +138,31 @@ FIRST_PASS_EXECUTION_LOCK = (
 )
 
 
+def verify_manifest_freshness(
+    package_path: Path, package_text: str, manifest_path: Path | None = None
+) -> dict[str, object]:
+    """Block generation when a package no longer matches its source manifest file."""
+    digest_match = re.search(r"^- 清单文件指纹：`sha256:([0-9a-f]{64})`\s*$", package_text, re.MULTILINE)
+    source_match = re.search(r"^- 来源清单：`([^`]+)`\s*$", package_text, re.MULTILINE)
+    if not digest_match or not source_match:
+        return {"pass": False, "reason": "package lacks source-manifest fingerprint metadata"}
+
+    source = manifest_path.expanduser().resolve() if manifest_path else package_path.parent / source_match.group(1)
+    source = source.resolve()
+    if not source.is_file():
+        return {"pass": False, "reason": f"source manifest not found: {source}", "manifest": str(source)}
+
+    expected = digest_match.group(1)
+    actual = hashlib.sha256(source.read_bytes()).hexdigest()
+    return {
+        "pass": actual == expected,
+        "reason": "source manifest matches package" if actual == expected else "source manifest changed after package build",
+        "manifest": str(source),
+        "expected": expected,
+        "actual": actual,
+    }
+
+
 def score_generation_package(text: str) -> dict[str, object]:
     """Score prevention of known first-pass failure classes on a 100-point scale."""
     components: dict[str, dict[str, object]] = {}
@@ -153,18 +188,22 @@ def score_generation_package(text: str) -> dict[str, object]:
     mapping_lines = [line for line in text.splitlines() if line.startswith("- ITEM ")]
     risky_lines = [line for line in mapping_lines if TEXT_SURFACE_RE.search(line) or NUMERIC_SURFACE_RE.search(line) or BRAND_SURFACE_RE.search(line)]
     guarded_lines = [line for line in risky_lines if "TEXT-RISK GUARD:" in line]
+    global_surface_lock = "### Illustration surface text lock" in text and ILLUSTRATION_SURFACE_LOCK in text
     if risky_lines:
         text_risk_score = round(20 * len(guarded_lines) / len(risky_lines))
         if not guarded_lines and "NEVER RENDER AS TEXT" in text:
             text_risk_score = 8
     else:
         text_risk_score = 20
+    if not global_surface_lock:
+        text_risk_score = min(text_risk_score, 12)
     components["illustration_text_safety"] = {
         "score": text_risk_score,
         "max": 20,
-        "pass": len(guarded_lines) == len(risky_lines),
+        "pass": global_surface_lock and len(guarded_lines) == len(risky_lines),
         "risky_items": len(risky_lines),
         "guarded_items": len(guarded_lines),
+        "global_surface_lock": global_surface_lock,
     }
 
     age_lock = "### Age adaptation lock" in text and "not age assignments" in text
@@ -207,18 +246,23 @@ def score_generation_package(text: str) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package", type=Path)
+    parser.add_argument("--manifest", type=Path, help="source manifest when it is not beside the package")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--min-score", type=int, default=90)
     args = parser.parse_args()
-    text = args.package.expanduser().resolve().read_text(encoding="utf-8")
+    package = args.package.expanduser().resolve()
+    text = package.read_text(encoding="utf-8")
     result = score_generation_package(text)
+    freshness = verify_manifest_freshness(package, text, args.manifest)
+    result["manifest_freshness"] = freshness
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         print(f"GENERATION_READINESS {result['total']}/{result['max']} ready={result['ready']}")
         for name, item in result["components"].items():
             print(f"{name}: {item['score']}/{item['max']} pass={item['pass']}")
-    return 0 if bool(result["ready"]) and int(result["total"]) >= args.min_score else 1
+        print(f"manifest_freshness: pass={freshness['pass']} reason={freshness['reason']}")
+    return 0 if bool(result["ready"]) and int(result["total"]) >= args.min_score and freshness["pass"] else 1
 
 
 if __name__ == "__main__":

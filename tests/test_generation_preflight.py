@@ -11,10 +11,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from build_generation_package import build, compile_visible_text_plan  # noqa: E402
 from generation_preflight import (  # noqa: E402
+    ILLUSTRATION_SURFACE_LOCK,
     material_type_style_lock,
     runtime_canvas_lock,
     sanitize_visual_instruction,
     score_generation_package,
+    verify_manifest_freshness,
     visual_risk_guard,
 )
 from test_content_contract_v4 import manifest  # noqa: E402
@@ -51,6 +53,12 @@ class GenerationPreflightTests(unittest.TestCase):
         self.assertIn("do not invent names", guard)
         self.assertIn("do not invent digits", guard)
 
+    def test_clothing_and_prop_surfaces_receive_text_and_number_guards(self) -> None:
+        guard = visual_risk_guard("穿蓝色球衣并制作机器人", "人物能力")
+        self.assertIn("TEXT-RISK GUARD", guard)
+        self.assertIn("digits", guard)
+        self.assertIn("logos", guard)
+
     def test_numeric_positive_semantics_are_rewritten_not_merely_negated(self) -> None:
         age = sanitize_visual_instruction("生日蜡烛与年龄数字", "年龄信息")
         grade = sanitize_visual_instruction("年级数字徽章", "学校信息")
@@ -81,7 +89,21 @@ class GenerationPreflightTests(unittest.TestCase):
         self.assertIn("### Runtime canvas lock", package)
         self.assertIn("### Material-type style lock", package)
         self.assertIn("### Visible-text occurrence lock", package)
+        self.assertIn("### Illustration surface text lock", package)
+        self.assertIn(ILLUSTRATION_SURFACE_LOCK, package)
         self.assertIn("### First-pass execution lock", package)
+
+    def test_manifest_fingerprint_blocks_stale_generation_package(self) -> None:
+        manifest_path = self.write_manifest(manifest(VOCABULARY_POSTER))
+        package_text = build(manifest_path, ROOT)
+        package_path = manifest_path.with_name("generation-package.md")
+        package_path.write_text(package_text, encoding="utf-8")
+        self.assertTrue(verify_manifest_freshness(package_path, package_text)["pass"])
+
+        manifest_path.write_text(manifest_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        stale = verify_manifest_freshness(package_path, package_text)
+        self.assertFalse(stale["pass"])
+        self.assertIn("changed after package build", stale["reason"])
 
     def test_combined_header_alias_is_zero_locked_not_rendered(self) -> None:
         regions = [
@@ -102,6 +124,25 @@ class GenerationPreflightTests(unittest.TestCase):
         regions = [["标题区", "展示", "英语复习", "标题"]]
         with self.assertRaisesRegex(ValueError, "P01"):
             compile_visible_text_plan(["英语复习", "随意口号", "核心词汇"], regions, [], ["核心词汇"])
+
+    def test_confirmed_user_facing_module_aliases_are_region_bound(self) -> None:
+        regions = [
+            ["标题区", "展示", "英语复习", "标题"],
+            ["核心词汇区", "展示", "核心词汇；16项词汇", "词汇"],
+            ["核心句型区", "展示", "句子串联；2组句型", "句型"],
+            ["知识提示区", "展示", "句型特点；3组提示", "提示"],
+        ]
+        plan = compile_visible_text_plan(
+            ["英语复习", "核心词汇", "句子串联", "句型特点"],
+            regions,
+            [],
+            ["核心词汇", "核心句型", "知识提示"],
+        )
+        self.assertIn(("核心词汇区", "核心词汇"), plan["placements"])
+        self.assertIn(("核心句型区", "句子串联"), plan["placements"])
+        self.assertIn(("知识提示区", "句型特点"), plan["placements"])
+        self.assertNotIn(("主体模块标签", "核心句型"), plan["placements"])
+        self.assertNotIn(("主体模块标签", "知识提示"), plan["placements"])
 
     def test_built_package_removes_combined_header_alias_everywhere(self) -> None:
         content = manifest(VOCABULARY_POSTER).replace(

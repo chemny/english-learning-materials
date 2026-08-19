@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 
-SKILL_VERSION = "1.2.0"
+SKILL_VERSION = "1.2.2"
 MANIFEST_SCHEMA_VERSION = "4"
 CONTENT_CONTRACT_VERSION = "exact-modules-v1"
 

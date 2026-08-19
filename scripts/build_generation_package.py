@@ -13,6 +13,7 @@ from age_profiles import age_prompt_block
 from content_contract import EXACT_MODULES, FORBIDDEN_MODULES
 from generation_preflight import (
     FIRST_PASS_EXECUTION_LOCK,
+    ILLUSTRATION_SURFACE_LOCK,
     VISIBLE_OCCURRENCE_LOCK,
     material_type_style_lock,
     runtime_canvas_lock,
@@ -55,6 +56,22 @@ def _confirmed_header_text(region_rows: list[list[str]]) -> list[tuple[str, str]
     return placements
 
 
+def _confirmed_module_labels(
+    region_rows: list[list[str]], whitelist: list[str]
+) -> list[tuple[str, str]]:
+    """Bind confirmed visible module labels, including user-facing aliases, to their regions."""
+    module_regions = {"核心词汇区", "核心句型区", "知识提示区"}
+    whitelist_set = set(whitelist)
+    placements: list[tuple[str, str]] = []
+    for row in region_rows:
+        if len(row) < 3 or row[0] not in module_regions or row[1] != "展示":
+            continue
+        first_item = re.split(r"\s*[；;]\s*", row[2], maxsplit=1)[0].strip()
+        if first_item in whitelist_set:
+            placements.append((row[0], first_item))
+    return placements
+
+
 def compile_visible_text_plan(
     whitelist: list[str],
     region_rows: list[list[str]],
@@ -64,9 +81,18 @@ def compile_visible_text_plan(
     """Compile allowed text into region-bound required text and zero-count title aliases."""
     header = _confirmed_header_text(region_rows)
     placements: list[tuple[str, str]] = list(header)
-    # A module can be structurally present without a printed label. Lock its
-    # placement only when the confirmed whitelist explicitly makes it visible.
-    placements.extend(("主体模块标签", module) for module in exact_modules if module in whitelist)
+    # A module can be structurally present without a printed label. Prefer the
+    # user-facing label confirmed in that region (for example 句子串联), while
+    # retaining the exact internal module name as a fallback when it is the
+    # confirmed visible label.
+    module_labels = _confirmed_module_labels(region_rows, whitelist)
+    placements.extend(module_labels)
+    placed_module_labels = {value for _region, value in module_labels}
+    placements.extend(
+        ("主体模块标签", module)
+        for module in exact_modules
+        if module in whitelist and module not in placed_module_labels
+    )
     for row in content_rows:
         if len(row) < 9:
             continue
@@ -217,11 +243,13 @@ def build(manifest: Path, skill_root: Path) -> str:
     digest = hashlib.sha256(
         json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    manifest_file_digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
 
     lines = [
         "# 标准生图任务包",
         "",
         f"- 内容指纹：`sha256:{digest}`",
+        f"- 清单文件指纹：`sha256:{manifest_file_digest}`",
         f"- 来源清单：`{manifest.name}`",
         f"- 资料类型：{metadata['资料类型']}",
         f"- 教材：{metadata['出版社']}《{metadata['教材名称']}》 {metadata['年级册次']}；单元编号：{metadata['单元']}；单元标题：{metadata['单元标题']}",
@@ -318,6 +346,10 @@ def build(manifest: Path, skill_root: Path) -> str:
             "### Reference-image age boundary",
             "",
             "Use any reference image for the confirmed layout, drawing medium, palette, hierarchy and decoration rhythm. Never copy or inherit reference characters, body proportions, clothing, school-stage props or age-coded decoration when they conflict with the age adaptation lock above.",
+            "",
+            "### Illustration surface text lock",
+            "",
+            ILLUSTRATION_SURFACE_LOCK,
             "",
             "### Adaptive layout decision",
             "",

@@ -19,7 +19,7 @@ python scripts/init_material_job.py --output <任务目录> --slug <任务名> -
 
 除教材、版本、年龄、标题、风格和确认状态外，必须包含：
 
-- `Skill版本：1.2.0`
+- `Skill版本：1.2.2`
 - `内容契约版本：exact-modules-v1`
 - `资料类型`：只允许 `词汇复习海报` 或 `单元复习海报`
 - `主体模块`：词汇模式为 `核心词汇`；单元模式为 `核心词汇 + 核心句型 + 知识提示`
@@ -100,7 +100,7 @@ python scripts/validate_manifest.py <material-manifest.md> --stage generate
 python scripts/build_generation_package.py <material-manifest.md>
 ```
 
-生成的任务包必须同时包含：内容指纹、参考资产指纹、`EXACT MODULES`、`FORBIDDEN MODULES`、区域化可见文字计划、语义别名零次锁、内容到配图映射和执行锁。不同电脑只有在 Skill 版本、清单、任务包和参考资产指纹一致时，才算使用同一输入。
+生成的任务包必须同时包含：内容指纹、清单文件指纹、参考资产指纹、`EXACT MODULES`、`FORBIDDEN MODULES`、区域化可见文字计划、语义别名零次锁、内容到配图映射和执行锁。生图预检必须比较当前清单文件与任务包记录的清单文件指纹；不同电脑只有在 Skill 版本、清单、任务包和参考资产指纹一致时，才算使用同一输入。
 
 ## 批量任务
 

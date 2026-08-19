@@ -71,7 +71,7 @@ def manifest(material_type: str) -> str:
 ## 任务信息
 
 - 清单版本：4
-- Skill版本：1.2.0
+- Skill版本：1.2.2
 - 内容契约版本：exact-modules-v1
 - 资料类型：{material_type}
 - 内容范围：已确认范围

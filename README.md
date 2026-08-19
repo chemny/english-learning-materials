@@ -39,8 +39,9 @@ The Skill verifies the textbook identity and unit title, applies a material-type
 | Four visual themes | Choose Hand-drawn Playful, Campus Magazine, Modern Study Journal, or Youth Comic Poster, or provide a reference image |
 | Reference-first style routing | Use a supplied or bundled example for layout by default; automatically fall back to detailed text visual DNA when no readable image is available |
 | Pure image generation | Produce a complete visual with the current Agent's native image-generation capability by default |
-| First-pass readiness gate | Resolve the runtime canvas, module/style conflicts, text-bearing illustration risks, and learner-age cues before calling the image model |
-| Region-bound text plan | Bind every approved title, label, and learning item to a region and occurrence count, removing combined-title aliases before generation |
+| First-pass readiness gate | Resolve the runtime canvas, module/style conflicts, text-bearing illustration risks, learner-age cues, and stale manifest/package mismatches before calling the image model |
+| Region-bound text plan | Bind every approved title, user-facing module label, and learning item to a region and occurrence count, removing combined-title aliases before generation |
+| Illustration surface lock | Keep clothing, books, screens, signs, robots, packaging, and similar props free of invented letters, digits, logos, brands, and slogans |
 | Generation economy | Generate one intended final first, allow one targeted retry only after a recorded hard failure, and require explicit approval before a third generation |
 | Single or batch production | Generate independent manifests and images for one unit or a larger material pack |
 | Quality gates | Check confirmations, source rows, visible-text whitelist, image count, spelling, and semantic alignment through full-resolution region-by-region visual review |
@@ -83,8 +84,8 @@ The workflow pauses first for textbook identity confirmation and again for the f
 3. Build a schema-v4 `material-manifest.md` with complete candidate pools, deterministic selections, exact modules, a visible-text whitelist, layout, and age profile.
 4. Run the theme-aware layout preflight; treat `review` as guidance and choose automatic adaptation, page splitting, or a confirmed single-page attempt for clear overload.
 5. Render and confirm a final-product content card that mirrors the planned poster regions.
-6. Validate the confirmed manifest and compile a fingerprinted `generation-package.md` with region-bound visible-text placement and combined-title alias removal.
-7. Run `generation_preflight.py`; do not generate until every hard component passes and readiness is at least 90/100.
+6. Validate the confirmed manifest and compile a fingerprinted `generation-package.md` with region-bound visible-text placement, confirmed module-display labels, combined-title alias removal, and a source-manifest file fingerprint.
+7. Run `generation_preflight.py`; do not generate until every hard component passes, readiness is at least 90/100, and the package still matches the current source manifest.
 8. Generate one intended-final image per manifest. Retry only after recording a hard acceptance failure.
 9. Inspect the full-resolution image region by region for spelling, duplicate or out-of-list text, illustration mapping, region consistency, age fit, and batch consistency before delivery.
 
