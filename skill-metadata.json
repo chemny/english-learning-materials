@@ -1,0 +1,10 @@
+{
+  "skill_version": "1.2.1",
+  "manifest_schema": 4,
+  "content_contract": "exact-modules-v1",
+  "default_generation_mode": "纯生图",
+  "supported_poster_types": [
+    "词汇复习海报",
+    "单元复习海报"
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "英语学习资料生成器"
+  short_description: "按固定内容契约生成单张或批量英语词汇与单元复习海报"
+  default_prompt: "使用 $english-learning-materials，根据指定教材和单元制作词汇复习海报或单元复习海报，并锁定内容数量与主体模块。"

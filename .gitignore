@@ -1,0 +1,17 @@
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+.env
+.env.*
+!.env.example
+outputs/
+*.log
+publish-check-report.json
+se-quality-report.json

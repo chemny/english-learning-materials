@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "style_id": "primary-handdrawn-poster-v1",
+      "role": "active",
+      "generation": 2,
+      "path": "assets/style-references/primary-handdrawn-fresh-v2.png",
+      "sha256": "b4ad8aeb6e21d789136e654619bb6a4beebccde14e36925eea6116ca3395d2fb",
+      "width": 1080,
+      "height": 1440
+    },
+    {
+      "style_id": "campus-magazine-v1",
+      "role": "active",
+      "generation": 1,
+      "path": "assets/style-references/campus-magazine-v1.png",
+      "sha256": "1d9d77bc2532c7aa2c96e9aa85a9ebe3a3d47a31a1321d2eb7da491906934e81",
+      "width": 1024,
+      "height": 1536
+    },
+    {
+      "style_id": "modern-study-journal-v1",
+      "role": "active",
+      "generation": 1,
+      "path": "assets/style-references/modern-study-journal-v1.png",
+      "sha256": "021c49b1468e5a71bc184ec74ad98a8913dd76248a94be49ee139c4e17b3ae67",
+      "width": 1024,
+      "height": 1536
+    },
+    {
+      "style_id": "youth-comic-poster-v1",
+      "role": "active",
+      "generation": 1,
+      "path": "assets/style-references/youth-comic-poster-v1.png",
+      "sha256": "23dfcd4b17ac569f8e4e565a83fc32fc5fe8d4ba8be2e81dd9b5f84f2c7124f6",
+      "width": 1024,
+      "height": 1536
+    }
+  ]
+}
